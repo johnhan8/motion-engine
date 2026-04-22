@@ -1,28 +1,25 @@
-# gitignore
-
-# virtual environments
-venv/
-venv_mp/
-venv_tf/
-
-# logs / data 
-*.csv
-data/
-archive/
-data/*.csv
-
-# python cache
+# Python
 __pycache__/
 *.pyc
+*.pyo
 
-# OS
+# Virtual environments
+venv/
+venv_mp/
+env/
+environment/
+virtual/
+command/
+create/
+new/
+to/
+#/
+
+# Mac
 .DS_Store
 
+# Data / logs
+*.csv
 
-
-# ???? 
-*.tar.gz
-*.tflite
-*.dylib
-*.so
-*.txt
+# IDE
+.vscode/
