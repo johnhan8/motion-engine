@@ -1,0 +1,32 @@
+# common commands 
+
+
+
+python3.10 -m venv venv_mp      # command to create new virtual environment venv_mp 
+
+source venv_mp/bin/activate     # command to activate or enter into virtual environment venv_mp
+
+deactivate           # command to deactivate venv 
+
+rm -rf venv_mp       # remove virtual environment 
+
+python --version            # shows python version, we want Python 3.10.x
+
+pip install --upgrade pip           # upgrades this utility pip 
+
+pip install opencv-python numpy mediapipe   # Install dependencies again
+
+pip install tflite-runtime            # For TensorFlow Lite:
+
+python main.py
+
+git add .
+git commit -m "feat: new feature   __________ ____   ___ "
+git commit -m "fix: bug fix   __________ _______ _______ "
+git commit -m "refactor: structure change:   ____ ______  "
+git commit -m "perf: performance improvement   _________  "
+git commit -m "docs: README updates    __________ _______ "
+git push
+
+tree -L 3
+

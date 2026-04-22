@@ -1,0 +1,28 @@
+# gitignore
+
+# virtual environments
+venv/
+venv_mp/
+venv_tf/
+
+# logs / data 
+*.csv
+data/
+archive/
+data/*.csv
+
+# python cache
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+
+
+
+# ???? 
+*.tar.gz
+*.tflite
+*.dylib
+*.so
+*.txt
