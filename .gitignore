@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environments
+venv/
+virtual/
+environment/
+create/
+command/
+new/
+to/
+#/
+
+# Mac
+.DS_Store
+
+# Data (optional - keep small CSVs if needed)
+data/
+*.log
+
+# IDE
+.cursor/
+
