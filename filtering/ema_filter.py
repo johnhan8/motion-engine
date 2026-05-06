@@ -1,4 +1,8 @@
-"""Exponential moving average filtering for IMU vectors."""
+"""Exponential moving average filtering for IMU vectors.
+
+**STABLE (IMU path):** ``EmaFilter.update(ImuSample)`` -> ``FilteredImuSample``.
+Scalar smoothing uses ``ScalarEma`` in this same module.
+"""
 
 from __future__ import annotations
 

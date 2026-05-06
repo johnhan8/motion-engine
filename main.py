@@ -1,4 +1,9 @@
-"""Minimal IMU pipeline demo: simulator + EMA filter."""
+"""IMU pipeline CLI entry (stable).
+
+Delegates to ``core.pipeline.run`` only. Do not reintroduce alternate IMU
+execution paths here without updating the stability contract in
+``core/pipeline.py``.
+"""
 
 from __future__ import annotations
 

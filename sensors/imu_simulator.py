@@ -1,4 +1,8 @@
-"""IMU simulator for synthetic accelerometer and gyroscope data."""
+"""IMU simulator for synthetic accelerometer and gyroscope data.
+
+**STABLE (IMU path):** ``ImuSimulator.read()`` -> ``ImuSample`` with 3-axis
+accel and gyro is the supported sensor output contract for the IMU pipeline.
+"""
 
 from __future__ import annotations
 

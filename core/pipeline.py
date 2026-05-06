@@ -1,15 +1,52 @@
-"""Single entry point for IMU simulation -> EMA filtering -> logging."""
+"""Single entry point for IMU simulation -> EMA filtering -> logging.
+
+**STABLE SURFACE (IMU path):** Treat the public entrypoint ``run()``,
+``ImuPipeline``, ``ImuSample``, ``FilteredImuSample``, sensor read API, and
+logger protocol as stable unless fixing bugs or intentional version bumps.
+Prefer additive changes; avoid reshaping this module without a strong reason.
+"""
 
 from __future__ import annotations
 
 import csv
 import math
+import sys
 import time
+import warnings
 from pathlib import Path
 from typing import Protocol
 
 from filtering.ema_filter import EmaFilter, FilteredImuSample
 from sensors.imu_simulator import ImuSample, ImuSimulator
+
+
+def _legacy_modules_in_process() -> list[str]:
+    """Return names of loaded top-level packages that violate IMU isolation."""
+    found: list[str] = []
+    for name in sys.modules:
+        if name == "perception" or name.startswith("perception."):
+            found.append(name)
+        elif name == "exercises" or name.startswith("exercises."):
+            found.append(name)
+    return sorted(set(found))
+
+
+def warn_if_legacy_stack_loaded(
+    context: str = "core.pipeline",
+    *,
+    stacklevel: int = 2,
+) -> None:
+    """Emit a warning if vision/legacy packages are already imported (IMU isolation)."""
+    legacy = _legacy_modules_in_process()
+    if legacy:
+        warnings.warn(
+            "IMU pipeline isolation violated: `perception` and/or `exercises` "
+            f"modules are loaded ({context}). Loaded: {legacy[:20]}"
+            + (f" … (+{len(legacy) - 20} more)" if len(legacy) > 20 else "")
+            + ". See ARCHITECTURE.md. Import IMU stack without legacy packages.",
+            RuntimeWarning,
+            stacklevel=stacklevel,
+        )
 
 
 class OutputLogger(Protocol):
@@ -128,6 +165,8 @@ class ImuPipeline:
         if duration_seconds is None and samples is None:
             raise ValueError("Provide either duration_seconds or samples.")
 
+        warn_if_legacy_stack_loaded(context="ImuPipeline.run", stacklevel=3)
+
         out = logger or ConsoleLogger()
         interval = 1.0 / self.sample_rate_hz
         start = time.perf_counter()
@@ -193,3 +232,6 @@ def run(
         if csv_logger:
             csv_logger.close()
             print(f"Wrote IMU log to {csv_logger.path}")
+
+
+warn_if_legacy_stack_loaded(context="import core.pipeline", stacklevel=2)

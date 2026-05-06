@@ -1,4 +1,7 @@
-"""Run IMU pipeline for 10 seconds and log raw vs filtered acceleration."""
+"""Run IMU pipeline for a fixed duration and log accel to CSV.
+
+Uses the stable entrypoint ``core.pipeline.run`` (same contract as ``main.py``).
+"""
 
 from __future__ import annotations
 
