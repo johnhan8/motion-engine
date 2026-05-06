@@ -1,26 +1,15 @@
-import numpy as np
+from perception.temporal.derivatives import KeyedDerivativeTracker
+
+_DEFAULT_KEYS = {
+    "hip_y": "hip_vel",
+    "knee_angle": "knee_vel",
+    "elbow_angle": "elbow_vel",
+}
+
 
 class MotionDynamics:
     def __init__(self):
-        self.prev = None
+        self._tracker = KeyedDerivativeTracker(_DEFAULT_KEYS)
 
     def update(self, features):
-        if features is None:
-            return None
-
-        if self.prev is None:
-            self.prev = features
-            return {
-                "hip_vel": 0,
-                "knee_vel": 0,
-                "elbow_vel": 0
-            }
-
-        dyn = {
-            "hip_vel": features["hip_y"] - self.prev["hip_y"],
-            "knee_vel": features["knee_angle"] - self.prev["knee_angle"],
-            "elbow_vel": features["elbow_angle"] - self.prev["elbow_angle"],
-        }
-
-        self.prev = features
-        return dyn
+        return self._tracker.update(features)

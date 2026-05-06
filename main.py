@@ -1,95 +1,60 @@
-import cv2
+"""Minimal IMU pipeline demo: simulator + EMA filter."""
 
-from core.state import SessionState
-from core.controller import ExerciseController
-from core.engine import run_engine
+from __future__ import annotations
 
-from perception.detector import PoseDetector
-from perception.features import extract_features
+import argparse
 
-from perception.motion_buffer import MotionBuffer
-from perception.motion_embedder import MotionEmbedder
-from perception.motion_model import MotionModel
-from perception.motion_smoother import MotionSmoother
+from core.pipeline import run
 
-from ui.overlay import draw_overlay
-from session.logger import SessionLogger
+def _parse_args() -> argparse.Namespace:
+    """Parse runtime options for IMU pipeline execution."""
+    parser = argparse.ArgumentParser(description="IMU simulator + EMA filter demo.")
+    parser.add_argument(
+        "--samples",
+        type=int,
+        default=10,
+        help="Number of samples to generate.",
+    )
+    parser.add_argument(
+        "--alpha",
+        type=float,
+        default=0.2,
+        help="Initial EMA alpha in (0.0, 1.0].",
+    )
+    parser.add_argument(
+        "--interactive-tuning",
+        action="store_true",
+        help="Prompt to tune alpha after each sample.",
+    )
+    parser.add_argument(
+        "--motion-pattern",
+        choices=("none", "sinusoidal", "random_walk"),
+        default="sinusoidal",
+        help="IMU motion pattern mode.",
+    )
+    return parser.parse_args()
 
 
-controller = ExerciseController()
-
-
-def main():
-    state = SessionState()
-    logger = SessionLogger()
-
-    cap = cv2.VideoCapture(0)
-    pose_detector = PoseDetector()
-
-    buffer = MotionBuffer()
-    embedder = MotionEmbedder()
-    model = MotionModel()
-    smoother = MotionSmoother()
-
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break
-
-        # ----------------------
-        # Pose detection
-        # ----------------------
-        landmarks = pose_detector.get_landmarks(frame)
-
-        # ----------------------
-        # Feature extraction
-        # ----------------------
-        features = extract_features(landmarks)
-        buffer.add(features)
-
-        sequence = buffer.get_sequence()
-
-        # ----------------------
-        # Motion intelligence pipeline
-        # ----------------------
-        if sequence:
-            embedding = embedder.encode(sequence)
-            if embedding is None: 
-                continue
-            label, scores = model.predict(embedding)
-
-            smoother.update(label)
-            stable_exercise = smoother.stable()
-
-            if stable_exercise:
-                controller.set(stable_exercise)
-
-        exercise = controller.get_current()
-
-        # ----------------------
-        # Rep engine
-        # ----------------------
-        state = run_engine(landmarks, state, exercise)
-
-        logger.log(state, exercise)
-
-        # ----------------------
-        # UI
-        # ----------------------
-        frame = pose_detector.draw_landmarks(frame)
-        frame = draw_overlay(frame, state, controller)
-
-        cv2.imshow("KineticAI", frame)
-
-        if cv2.waitKey(1) & 0xFF == 27:
-            break
-
-    cap.release()
-    cv2.destroyAllWindows()
-
-    logger.save()
-    print(state.__dict__)
+def main(
+    samples: int = 10,
+    alpha: float = 0.2,
+    interactive_tuning: bool = False,
+    motion_pattern: str = "sinusoidal",
+) -> None:
+    """Run the IMU pipeline via the single core entry point."""
+    run(
+        samples=samples,
+        alpha=alpha,
+        motion_pattern=motion_pattern,
+        interactive_tuning=interactive_tuning,
+    )
 
 
 if __name__ == "__main__":
-    main()
+    args = _parse_args()
+    main(
+        samples=args.samples,
+        alpha=args.alpha,
+        interactive_tuning=args.interactive_tuning,
+        motion_pattern=args.motion_pattern,
+    )

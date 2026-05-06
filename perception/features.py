@@ -1,5 +1,6 @@
+from perception.biomechanics import left_elbow_angle_deg, left_knee_angle_deg
 from perception.landmarks import get_point
-from perception.geometry import calculate_angle
+
 
 def extract_features(landmarks):
     if not landmarks:
@@ -7,16 +8,11 @@ def extract_features(landmarks):
 
     try:
         shoulder = get_point(landmarks, "left_shoulder")
-        elbow = get_point(landmarks, "left_elbow")
-        wrist = get_point(landmarks, "left_wrist")
-
         hip = get_point(landmarks, "left_hip")
         knee = get_point(landmarks, "left_knee")
-        ankle = get_point(landmarks, "left_ankle")
 
-        # angles
-        elbow_angle = calculate_angle(shoulder, elbow, wrist)
-        knee_angle = calculate_angle(hip, knee, ankle)
+        elbow_angle = left_elbow_angle_deg(landmarks)
+        knee_angle = left_knee_angle_deg(landmarks)
 
         # ----------------------------
         # NORMALIZED FEATURES (0–1 SCALE)
@@ -42,5 +38,5 @@ def extract_features(landmarks):
             "shoulder_y": shoulder[1],
         }
 
-    except:
+    except Exception:
         return None
