@@ -1,5 +1,7 @@
 # Architecture Rules
 
+Product vision and direction: [MOTION_ENGINE_SPEC.md](MOTION_ENGINE_SPEC.md). This file defines **structure and dependency rules** for the IMU path vs legacy.
+
 ## Active System (IMU Pipeline)
 - sensors/
 - filtering/

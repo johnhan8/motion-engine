@@ -28,6 +28,19 @@ def parse_args() -> argparse.Namespace:
         default="sinusoidal",
     )
     parser.add_argument("--output", default="data/imu_pipeline_log.csv")
+    parser.add_argument(
+        "--json-output",
+        default=None,
+        metavar="PATH",
+        help="Optional JSON Lines log (raw + filtered per tick).",
+    )
+    parser.add_argument(
+        "--json-flush-every",
+        type=int,
+        default=64,
+        metavar="N",
+        help="JSONL buffer flush interval in samples.",
+    )
     return parser.parse_args()
 
 
@@ -37,6 +50,8 @@ def run_harness(
     alpha: float,
     motion_pattern: str,
     output_path: str,
+    json_output: str | None = None,
+    json_flush_every: int = 64,
 ) -> None:
     """Execute pipeline loop and store acceleration channels to CSV."""
     run(
@@ -46,6 +61,8 @@ def run_harness(
         alpha=alpha,
         motion_pattern=motion_pattern,
         csv_output=output_path,
+        json_output=json_output,
+        json_flush_every=json_flush_every,
     )
 
 
@@ -57,4 +74,6 @@ if __name__ == "__main__":
         alpha=args.alpha,
         motion_pattern=args.motion_pattern,
         output_path=args.output,
+        json_output=args.json_output,
+        json_flush_every=args.json_flush_every,
     )

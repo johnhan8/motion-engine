@@ -1,6 +1,8 @@
 # Motion Engine
 
-Real-time human motion tracking system using MediaPipe Pose.
+Real-time motion processing (IMU-first pipeline in `main.py`); legacy MediaPipe pose stack remains in-repo for optional vision work.
+
+**Guiding vision and roadmap:** [MOTION_ENGINE_SPEC.md](MOTION_ENGINE_SPEC.md).
 
 ## Features
 - Live webcam pose detection

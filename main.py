@@ -37,6 +37,19 @@ def _parse_args() -> argparse.Namespace:
         default="sinusoidal",
         help="IMU motion pattern mode.",
     )
+    parser.add_argument(
+        "--json-output",
+        default=None,
+        metavar="PATH",
+        help="Optional JSON Lines path (raw + filtered per tick, batched writes).",
+    )
+    parser.add_argument(
+        "--json-flush-every",
+        type=int,
+        default=64,
+        metavar="N",
+        help="Flush JSONL buffer every N samples (default 64).",
+    )
     return parser.parse_args()
 
 
@@ -45,6 +58,8 @@ def main(
     alpha: float = 0.2,
     interactive_tuning: bool = False,
     motion_pattern: str = "sinusoidal",
+    json_output: str | None = None,
+    json_flush_every: int = 64,
 ) -> None:
     """Run the IMU pipeline via the single core entry point."""
     run(
@@ -52,6 +67,8 @@ def main(
         alpha=alpha,
         motion_pattern=motion_pattern,
         interactive_tuning=interactive_tuning,
+        json_output=json_output,
+        json_flush_every=json_flush_every,
     )
 
 
@@ -62,4 +79,6 @@ if __name__ == "__main__":
         alpha=args.alpha,
         interactive_tuning=args.interactive_tuning,
         motion_pattern=args.motion_pattern,
+        json_output=args.json_output,
+        json_flush_every=args.json_flush_every,
     )

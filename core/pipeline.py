@@ -16,7 +16,8 @@ import warnings
 from pathlib import Path
 from typing import Protocol
 
-from filtering.ema_filter import EmaFilter, FilteredImuSample
+from core.structured_motion_log import FanOutOutputLogger, JsonlMotionLogger
+from filtering.filters import EmaFilter, FilteredImuSample
 from sensors.imu_simulator import ImuSample, ImuSimulator
 
 
@@ -108,8 +109,65 @@ class CsvLogger:
         return self._path
 
 
+class SensorInputLayer:
+    """Raw IMU ingestion: produce one ``ImuSample`` per read."""
+
+    def __init__(
+        self,
+        motion_pattern: str = "sinusoidal",
+        sample_rate_hz: float = 50.0,
+    ) -> None:
+        self._simulator = ImuSimulator(
+            motion_pattern=motion_pattern,
+            sample_rate_hz=sample_rate_hz,
+        )
+
+    def read(self) -> ImuSample:
+        return self._simulator.read()
+
+    @property
+    def source(self) -> ImuSimulator:
+        """Underlying simulator (same object as legacy ``ImuPipeline.sensor``)."""
+        return self._simulator
+
+
+class FilteringLayer:
+    """Signal conditioning: EMA over IMU vectors via ``filtering.filters``."""
+
+    def __init__(self, alpha: float) -> None:
+        self._ema = EmaFilter(alpha=alpha)
+
+    @property
+    def filter(self) -> EmaFilter:
+        """EMA instance (alias target for ``ImuPipeline.filter``)."""
+        return self._ema
+
+    def apply(self, raw: ImuSample) -> FilteredImuSample:
+        return self._ema.update(raw)
+
+
+class OutputLayer:
+    """Route structured ticks (raw + filtered) to a logger sink."""
+
+    def __init__(self, logger: OutputLogger | None = None) -> None:
+        self._sink: OutputLogger = logger if logger is not None else ConsoleLogger()
+
+    def emit(
+        self,
+        index: int,
+        elapsed_s: float,
+        raw: ImuSample,
+        filtered: FilteredImuSample,
+    ) -> None:
+        self._sink.log(index, elapsed_s, raw, filtered)
+
+    @property
+    def sink(self) -> OutputLogger:
+        return self._sink
+
+
 class ImuPipeline:
-    """Connect IMU sensor simulation to EMA filtering."""
+    """Compose sensor → filtering → output layers for the IMU motion path."""
 
     def __init__(
         self,
@@ -117,8 +175,13 @@ class ImuPipeline:
         motion_pattern: str = "sinusoidal",
         sample_rate_hz: float = 50.0,
     ) -> None:
-        self.sensor = ImuSimulator(motion_pattern=motion_pattern)
-        self.filter = EmaFilter(alpha=alpha)
+        self._sensor_input = SensorInputLayer(
+            motion_pattern=motion_pattern,
+            sample_rate_hz=sample_rate_hz,
+        )
+        self._filtering = FilteringLayer(alpha=alpha)
+        self.sensor = self._sensor_input.source
+        self.filter = self._filtering.filter
         self.sample_rate_hz = sample_rate_hz
 
     def set_alpha(self, alpha: float) -> None:
@@ -127,8 +190,8 @@ class ImuPipeline:
 
     def step(self) -> tuple[ImuSample, FilteredImuSample]:
         """Process one sensor sample through the filter."""
-        raw = self.sensor.read()
-        filtered = self.filter.update(raw)
+        raw = self._sensor_input.read()
+        filtered = self._filtering.apply(raw)
         self._assert_sample_shapes(raw, filtered)
         self._assert_filtered_finite(filtered)
         return raw, filtered
@@ -167,7 +230,7 @@ class ImuPipeline:
 
         warn_if_legacy_stack_loaded(context="ImuPipeline.run", stacklevel=3)
 
-        out = logger or ConsoleLogger()
+        output = OutputLayer(logger)
         interval = 1.0 / self.sample_rate_hz
         start = time.perf_counter()
         deadline = start + duration_seconds if duration_seconds is not None else None
@@ -186,7 +249,7 @@ class ImuPipeline:
                 )
 
             raw, filtered = self.step()
-            out.log(idx, now - start, raw, filtered)
+            output.emit(idx, now - start, raw, filtered)
 
             if interactive_tuning:
                 user_input = input("New alpha (Enter to keep current): ").strip()
@@ -212,6 +275,8 @@ def run(
     sample_rate_hz: float = 50.0,
     interactive_tuning: bool = False,
     csv_output: str | None = None,
+    json_output: str | None = None,
+    json_flush_every: int = 64,
 ) -> None:
     """Top-level pipeline entry point used by main and scripts."""
     pipeline = ImuPipeline(
@@ -219,8 +284,23 @@ def run(
         motion_pattern=motion_pattern,
         sample_rate_hz=sample_rate_hz,
     )
-    csv_logger = CsvLogger(csv_output) if csv_output else None
-    logger: OutputLogger = csv_logger if csv_logger else ConsoleLogger()
+    csv_logger: CsvLogger | None = None
+    json_logger: JsonlMotionLogger | None = None
+    sinks: list[OutputLogger] = []
+    if csv_output:
+        csv_logger = CsvLogger(csv_output)
+        sinks.append(csv_logger)
+    if json_output:
+        json_logger = JsonlMotionLogger(
+            json_output, flush_every=json_flush_every
+        )
+        sinks.append(json_logger)
+    if not sinks:
+        sinks.append(ConsoleLogger())
+
+    logger: OutputLogger = (
+        FanOutOutputLogger(*sinks) if len(sinks) > 1 else sinks[0]
+    )
     try:
         pipeline.run(
             duration_seconds=duration_seconds,
@@ -229,9 +309,13 @@ def run(
             interactive_tuning=interactive_tuning,
         )
     finally:
-        if csv_logger:
-            csv_logger.close()
-            print(f"Wrote IMU log to {csv_logger.path}")
+        closer = getattr(logger, "close", None)
+        if closer is not None:
+            closer()
+        if csv_logger is not None:
+            print(f"Wrote IMU CSV log to {csv_logger.path}")
+        if json_logger is not None:
+            print(f"Wrote IMU JSONL log to {json_logger.path}")
 
 
 warn_if_legacy_stack_loaded(context="import core.pipeline", stacklevel=2)
